@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ER:ON | 악화는 미리, 기록은 자동으로 - AI 응급실 의사결정 보조 솔루션</title>
+  <meta name="description" content="응급실 체류 환자 데이터를 매시간 반영하여 3시간 내 악화 위험을 예측하고, 진료 음성을 구조화된 응급기록 초안으로 자동 생성하는 AI 솔루션 ER:ON">
+  <meta name="keywords" content="ER:ON, 응급실 AI, 환자 악화 예측, 응급의료, 진료기록 자동화, Medical AI, LightGBM, Gemma, Whisper">
+  
+  <!-- Favicon (Medical Pulse & ON SVG) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230F172A'/><path d='M20 52 L36 52 L44 26 L56 76 L66 42 L74 52 L84 52' stroke='%2310B981' stroke-width='8' stroke-linecap='round' stroke-linejoin='round' fill='none'/><circle cx='80' cy='30' r='8' fill='%2334D399'/></svg>">
+  
+  <!-- Pretendard & Plus Jakarta Sans Web Fonts -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Disclaimer Notice Top Bar -->
+  <aside class="top-notice-bar" role="complementary" aria-label="의료기기 인허가 관련 안내">
+    <div class="container top-notice-inner">
+      <span class="notice-badge">안내</span>
+      <p class="notice-text">
+        ER:ON은 의료진의 의사결정을 보조하는 모델로 확정 진단 및 기록이 아닙니다. (현재 PoC 단계 / 상용화 전 임상 검증 진행 중)
+      </p>
+      <a href="#roadmap" class="notice-link">검증 로드맵 보기 &rarr;</a>
+    </div>
+  </aside>
+
+  <!-- Header / Navigation -->
+  <header id="site-header" class="header">
+    <div class="container nav-container">
+      <a href="#hero" class="logo" id="header-logo" aria-label="ER:ON 홈으로 이동">
+        <div class="logo-symbol">
+          <span class="logo-er">ER</span>
+          <span class="logo-colon">:</span>
+          <span class="logo-on">ON</span>
+        </div>
+        <div class="logo-desc">
+          <span class="logo-sub">predict &middot; record &middot; ON</span>
+        </div>
+      </a>
+
+      <!-- Desktop Nav Links -->
+      <nav class="nav-menu" id="nav-menu" aria-label="메인 메뉴">
+        <ul class="nav-list">
+          <li class="nav-item"><a href="#problem" class="nav-link">도입 배경</a></li>
+          <li class="nav-item"><a href="#solutions" class="nav-link">핵심 솔루션</a></li>
+          <li class="nav-item"><a href="#workflow" class="nav-link">작동 원리</a></li>
+          <li class="nav-item"><a href="#demo" class="nav-link">인터랙티브 데모</a></li>
+          <li class="nav-item"><a href="#business" class="nav-link">비즈니스 모델</a></li>
+          <li class="nav-item"><a href="#roadmap" class="nav-link">로드맵</a></li>
+        </ul>
+      </nav>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <!-- Theme Toggle Button -->
+        <button id="theme-toggle" class="btn-icon" aria-label="다크/라이트 테마 전환" title="테마 전환">
+          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+          </svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
+        <!-- CTA Button -->
+        <a href="#contact" class="btn btn-primary nav-cta-btn" id="header-contact-btn">PoC &middot; 파일럿 문의</a>
+
+        <!-- Mobile Menu Toggle -->
+        <button id="mobile-toggle" class="mobile-toggle" aria-label="메뉴 열기/닫기" aria-expanded="false">
+          <span class="bar"></span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section id="hero" class="hero-section">
+      <div class="hero-bg-shapes">
+        <div class="glow-sphere sphere-teal"></div>
+        <div class="glow-sphere sphere-blue"></div>
+        <div class="grid-overlay"></div>
+      </div>
+
+      <div class="container hero-container">
+        <div class="hero-content">
+          <div class="badge-pill">
+            <span class="badge-dot pulse"></span>
+            <span>AI 기반 응급실 의사결정 보조 시스템 (CDSS)</span>
+          </div>
+          
+          <h1 class="hero-title">
+            악화는 <span class="highlight-green">미리</span>,<br>
+            기록은 <span class="highlight-cyan">자동으로</span>
+          </h1>
+          
+          <p class="hero-subtitle">
+            <strong>ER:ON</strong>은 체류 중 축적되는 응급 환자 데이터를 매시간 분석하여 <strong>3시간 내 악화 위험도</strong>를 선제 예측하고, 진료 음성 대화를 <strong>구조화된 진료기록 초안</strong>으로 자동 작성합니다.
+          </p>
+
+          <div class="hero-meta-points">
+            <div class="meta-point-item">
+              <span class="meta-point-icon">✓</span>
+              <span>LightGBM &middot; TreeSHAP 기반 설명 가능한 악화 예측</span>
+            </div>
+            <div class="meta-point-item">
+              <span class="meta-point-icon">✓</span>
+              <span>Whisper &middot; Gemma 기반 12개 항목 진료기록 자동 구조화</span>
+            </div>
+            <div class="meta-point-item">
+              <span class="meta-point-icon">✓</span>
+              <span>Human-in-the-Loop: 의료진 확정 중심 안전 설계</span>
+            </div>
+          </div>
+
+          <div class="hero-buttons">
+            <a href="#demo" class="btn btn-primary btn-lg" id="hero-cta-demo">
+              라이브 시뮬레이션 체험
+              <svg viewBox="0 0 20 20" fill="currentColor" class="btn-arrow">
+                <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+              </svg>
+            </a>
+            <a href="#solutions" class="btn btn-secondary btn-lg" id="hero-cta-solutions">
+              솔루션 상세 보기
+            </a>
+          </div>
+        </div>
+
+        <!-- Hero Visual: Real-time Emergency Room AI Monitor Preview -->
+        <div class="hero-visual">
+          <div class="glass-monitor-card">
+            <div class="monitor-header">
+              <div class="monitor-status">
+                <span class="status-indicator live"></span>
+                <span class="status-text">ER:ON CLINICAL MONITOR &middot; LIVE</span>
+              </div>
+              <div class="monitor-time" id="monitor-clock">ER 체류 +02:40:15</div>
+            </div>
+
+            <!-- Patient Quick Card -->
+            <div class="patient-banner">
+              <div class="patient-id-badge">
+                <span class="p-badge-title">환자 ID</span>
+                <span class="p-badge-val">#ER-24089 (남 / 67세)</span>
+              </div>
+              <div class="patient-triage">
+                <span class="ktas-tag">KTAS 3단계</span>
+                <span class="reassess-tag blink">재평가 권고 (URGENT)</span>
+              </div>
+            </div>
+
+            <!-- Deterioration Gauge -->
+            <div class="monitor-risk-grid">
+              <div class="risk-gauge-box">
+                <span class="gauge-label">향후 3시간 내 악화 위험도</span>
+                <div class="gauge-visual">
+                  <div class="radial-score">
+                    <span class="score-number" id="hero-score">84.2</span><span class="score-percent">%</span>
+                  </div>
+                  <div class="risk-level-badge critical">위험도 고위험 (HIGH RISK)</div>
+                </div>
+                <div class="risk-detail-text">
+                  예측 대상: <strong>호흡부전 처치 & 승압제 투여</strong>
+                </div>
+              </div>
+
+              <!-- Explanation TreeSHAP Highlights -->
+              <div class="shap-summary-box">
+                <span class="shap-title">악화 근거 신호 (TreeSHAP 검증)</span>
+                <div class="shap-bar-group">
+                  <div class="shap-item">
+                    <span class="shap-name">SpO2 급락 (96 &rarr; 89%)</span>
+                    <span class="shap-val positive">+0.38</span>
+                  </div>
+                  <div class="shap-bar-bg"><div class="shap-bar-fill red" style="width: 82%;"></div></div>
+                </div>
+                <div class="shap-item">
+                  <span class="shap-name">호흡수 빈호흡 (28회/분)</span>
+                  <span class="shap-val positive">+0.26</span>
+                </div>
+                <div class="shap-bar-bg"><div class="shap-bar-fill red" style="width: 65%;"></div></div>
+                <div class="shap-item">
+                  <span class="shap-name">수축기 혈압 강하 (88 mmHg)</span>
+                  <span class="shap-val positive">+0.19</span>
+                </div>
+                <div class="shap-bar-bg"><div class="shap-bar-fill orange" style="width: 50%;"></div></div>
+              </div>
+            </div>
+
+            <!-- Record AI Audio Streaming Snippet -->
+            <div class="monitor-audio-record">
+              <div class="audio-stream-header">
+                <div class="mic-wave">
+                  <span class="wave-bar"></span>
+                  <span class="wave-bar"></span>
+                  <span class="wave-bar"></span>
+                  <span class="wave-bar"></span>
+                </div>
+                <span class="audio-stream-title">음성 대화 실시간 분석 &rarr; 12개 항목 초안 생성 중</span>
+                <span class="guardrail-badge">Backend Guardrail OK</span>
+              </div>
+              <p class="audio-transcript-snippet">
+                &ldquo;&hellip;숨찬 느낌이 30분 전부터 급격히 심해졌다고 하심. 청진 시 양측 기저부 수포음 청취됨&hellip;&rdquo;
+              </p>
+              <div class="audio-tags">
+                <span class="struct-tag">[주소증: 호흡곤란]</span>
+                <span class="struct-tag">[활력: SpO2 89%]</span>
+                <span class="struct-tag draft">[상태: DRAFT]</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Problem Section (첨부파일 2페이지 내용 완벽 반영) -->
+    <section id="problem" class="section problem-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-tag problem-tag">PROBLEM & URGENCY</span>
+          <h2 class="section-title">지금, 응급실 악화 예측 AI가 필요한 이유</h2>
+          <p class="section-lead-quote">
+            &ldquo;인력과 병상을 대신하는 AI가 아니라, 제한된 자원에서 <strong>'누구를 먼저 볼지'</strong> 정하는 AI&rdquo;
+          </p>
+        </div>
+
+        <!-- 3 Key Crisis Stat Cards -->
+        <div class="stats-grid">
+          <!-- Stat 1: Access -->
+          <div class="stat-card">
+            <div class="stat-card-badge">ACCESS</div>
+            <div class="stat-number-wrapper">
+              <span class="stat-prefix">+</span>
+              <span class="stat-number counter" data-target="88">0</span>
+              <span class="stat-unit">%</span>
+            </div>
+            <div class="stat-sub-figure">58,520 &rarr; 110,033건</div>
+            <h3 class="stat-title">응급실 '수용곤란' 사전고지 건수</h3>
+            <p class="stat-desc">
+              2023년에서 2024년 사이 폭증한 응급실 수용 곤란으로 인해 골든타임 내 환자 재평가가 더욱 절실해졌습니다.
+            </p>
+            <div class="stat-citation">
+              [1] 서영석 국회의원실 보도자료 (보건복지부&middot;소방청 분석, 2025)
+            </div>
+          </div>
+
+          <!-- Stat 2: Workload -->
+          <div class="stat-card">
+            <div class="stat-card-badge">WORKLOAD</div>
+            <div class="stat-number-wrapper">
+              <span class="stat-number counter" data-target="4408">0</span>
+              <span class="stat-unit">명</span>
+            </div>
+            <div class="stat-sub-figure">4,407.6명 / 전문의 1인당 연간</div>
+            <h3 class="stat-title">응급의학 전문의 연간 담당 환자 수</h3>
+            <p class="stat-desc">
+              과도한 환자 부담과 전공의 공백으로 인해 모든 체류 환자를 실시간으로 반복 재평가할 의료 인력이 구조적으로 부족합니다.
+            </p>
+            <div class="stat-citation">
+              [2] NEMC 『2022년도 응급의료기관 평가 기준집』
+            </div>
+          </div>
+
+          <!-- Stat 3: Quality -->
+          <div class="stat-card">
+            <div class="stat-card-badge">QUALITY</div>
+            <div class="stat-number-wrapper">
+              <span class="stat-number counter" data-target="15">0</span>
+              <span class="stat-unit">%</span>
+            </div>
+            <div class="stat-sub-figure">불일치 건 중 70.4%가 과소분류</div>
+            <h3 class="stat-title">KTAS와 전문가 재평가 불일치율 (14.7%)</h3>
+            <p class="stat-desc">
+              초기 분류 시점과 체류 중 상태의 괴리가 발생하며, 불일치 환자의 대다수가 실제 중증도보다 낮게 평가(Under-triage)됩니다.
+            </p>
+            <div class="stat-citation">
+              [3] Moon S-H et al. PLoS ONE 2019 (186/1,267건 불일치)
+            </div>
+          </div>
+        </div>
+
+        <!-- Problem Definition Box -->
+        <div class="problem-statement-card">
+          <div class="problem-statement-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <div class="problem-statement-content">
+            <span class="problem-label">핵심 문제 정의</span>
+            <p class="problem-main-text">
+              환자의 상태는 시간에 따라 역동적으로 변하지만, <strong>환자 상태 재평가는 극히 제한된 인력과 특정 시점의 판단에만 의존</strong>하고 있습니다.
+            </p>
+            <p class="problem-sub-text">
+              응급실 체류 중 지속적으로 축적되는 환자 데이터를 반영하여 <strong>재평가 대상을 능동적으로 갱신하고 제안하는 인텔리전트 계층의 부재</strong>가 의료사고와 골든타임 지연의 근본 원인입니다.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Solutions Section (첨부파일 1, 3페이지 내용 완벽 반영) -->
+    <section id="solutions" class="section solutions-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-tag solution-tag">OUR ANSWER</span>
+          <h2 class="section-title">예측에서 재평가 행동까지 연결</h2>
+          <p class="section-desc">
+            단순 확률 수치 제시에 그치지 않고, <strong>'재평가 필요' 상태와 구체적인 임상적 근거</strong>를 동시에 제시합니다.
+          </p>
+        </div>
+
+        <!-- 4 Steps Action Chain -->
+        <div class="action-chain-wrapper">
+          <div class="action-step-card">
+            <div class="step-badge">01</div>
+            <div class="step-header">
+              <span class="step-eng">Prediction</span>
+              <h3 class="step-kr">누가 위험한가</h3>
+            </div>
+            <p class="step-summary">매시간 3시간 내 위험 재예측</p>
+            <div class="step-arrow">&rarr;</div>
+          </div>
+
+          <div class="action-step-card">
+            <div class="step-badge">02</div>
+            <div class="step-header">
+              <span class="step-eng">Explanation</span>
+              <h3 class="step-kr">왜 위험해졌는가</h3>
+            </div>
+            <p class="step-summary">직전 대비 확인된 악화 신호</p>
+            <div class="step-arrow">&rarr;</div>
+          </div>
+
+          <div class="action-step-card">
+            <div class="step-badge">03</div>
+            <div class="step-header">
+              <span class="step-eng">Prioritization</span>
+              <h3 class="step-kr">누구를 먼저 보는가</h3>
+            </div>
+            <p class="step-summary">위험구간 기반 우선순위 정렬</p>
+            <div class="step-arrow">&rarr;</div>
+          </div>
+
+          <div class="action-step-card active">
+            <div class="step-badge">04</div>
+            <div class="step-header">
+              <span class="step-eng">Reassessment</span>
+              <h3 class="step-kr">무엇을 하는가</h3>
+            </div>
+            <p class="step-summary">'재평가 필요' 제시 후 의료진 판단</p>
+          </div>
+        </div>
+
+        <!-- Dual Core Feature Cards -->
+        <div class="dual-core-grid">
+          <!-- Card 1: Predict -->
+          <div class="core-feature-card">
+            <div class="core-card-header">
+              <div class="core-symbol-tag">
+                <span class="c-tag-sub">pr</span><span class="c-tag-main">E</span><span class="c-tag-sub">dict</span>
+              </div>
+              <span class="core-cat">PREDICT AI</span>
+            </div>
+            <h3 class="core-title">환자 상태 악화 예측 AI</h3>
+            <p class="core-desc">
+              응급실 체류 환자 데이터를 매시간 반영하여, 향후 3시간 내 급성 악화 위험도와 원인 근거를 동시 산출하여 선제적 조치를 이끕니다.
+            </p>
+
+            <div class="core-specs-list">
+              <div class="spec-row">
+                <span class="spec-name">예측 주기</span>
+                <span class="spec-val">ER 내원 &rarr; +1시간 후 첫 예측 &rarr; 매 1시간 주기 재예측</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-name">예측 지평 (Horizon)</span>
+                <span class="spec-val highlight">향후 3시간 내 골든타임</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-name">입력 Feature</span>
+                <span class="spec-val">100개 (활력징후, 혈액검사, KTAS 분류, 체류시간 등)</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-name">예측 대상 이벤트</span>
+                <span class="spec-val">호흡부전 처치 &middot; 승압제 사용 &middot; 활력징후 이상 &middot; CPR &middot; 사망</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-name">감시 종료 기준</span>
+                <span class="spec-val">ED 퇴실 + 2시간 (적용 범위 밖 시점 미생성)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Record -->
+          <div class="core-feature-card">
+            <div class="core-card-header">
+              <div class="core-symbol-tag cyan">
+                <span class="c-tag-main">R</span><span class="c-tag-sub">ecord</span>
+              </div>
+              <span class="core-cat cyan">RECORD AI</span>
+            </div>
+            <h3 class="core-title">음성 대화 기반 응급기록 초안 작성 AI</h3>
+            <p class="core-desc">
+              의사와 환자의 진료 음성 대화를 실시간 분석하여, 확인된 임상정보와 근거를 12개 표준 항목으로 구조화된 응급진료기록 초안으로 제시합니다.
+            </p>
+
+            <div class="core-specs-list">
+              <div class="spec-row">
+                <span class="spec-name">음성 인식 (STT)</span>
+                <span class="spec-val">Whisper STT 기반 시간 구간별 대화 원문 추출</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-name">구조화 모델</span>
+                <span class="spec-val highlight">Gemma + 의학 용어 온톨로지 검색 연동</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-name">서식 구조화</span>
+                <span class="spec-val">응급의학 12개 필수 항목 자동 분류 및 팩트 매핑</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-name">가드레일 검증</span>
+                <span class="spec-val">Backend Guardrail (Fact &middot; 상태 &middot; 후보 ID 실시간 정합성)</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-name">기록 완결 프로세스</span>
+                <span class="spec-val">의료진 원문 대조 &rarr; 수정 &rarr; DRAFT에서 SIGNED 전자서명</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture & Human-in-the-Loop Section (첨부파일 4페이지 완벽 반영) -->
+    <section id="workflow" class="section workflow-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-tag arch-tag">HUMAN-IN-THE-LOOP</span>
+          <h2 class="section-title">AI는 보조, 의료진이 확정</h2>
+          <p class="section-desc">
+            예측과 기록 전 과정에서 의료진의 임상적 판단을 최종 의사결정 지점으로 확고히 유지합니다.
+          </p>
+        </div>
+
+        <!-- Pipeline 01: 악화 예측 파이프라인 -->
+        <div class="pipeline-block">
+          <div class="pipeline-title-bar">
+            <span class="pipeline-num">01</span>
+            <h3 class="pipeline-title">악화 예측 파이프라인</h3>
+            <span class="pipeline-target">LightGBM &middot; Platt Scaling &middot; TreeSHAP</span>
+          </div>
+
+          <div class="pipeline-steps-grid">
+            <!-- Step 1 -->
+            <div class="pipe-card">
+              <div class="pipe-node-title">환자 데이터 수집</div>
+              <div class="pipe-badge">Data Input</div>
+              <p class="pipe-node-desc">
+                &bull; 활력징후(BP, HR, RR, SpO2, BT)<br>
+                &bull; 응급 검사결과 및 KTAS 분류<br>
+                &bull; 예측 시점까지의 누적 관측치
+              </p>
+            </div>
+            <div class="pipe-flow-arrow">&rarr;</div>
+
+            <!-- Step 2 -->
+            <div class="pipe-card">
+              <div class="pipe-node-title">위험도 산출</div>
+              <div class="pipe-badge">Machine Learning</div>
+              <p class="pipe-node-desc">
+                &bull; <strong>LightGBM + Platt Scaling</strong><br>
+                &bull; 앙상블 트리 기반 초고속 연산<br>
+                &bull; 향후 3시간 내 악화 확률 보정 산출
+              </p>
+            </div>
+            <div class="pipe-flow-arrow">&rarr;</div>
+
+            <!-- Step 3 -->
+            <div class="pipe-card">
+              <div class="pipe-node-title">근거 검증 (XAI)</div>
+              <div class="pipe-badge">Explainability</div>
+              <p class="pipe-node-desc">
+                &bull; <strong>TreeSHAP + 방향 Gate</strong><br>
+                &bull; 주요 Feature별 기여도 계산<br>
+                &bull; 수치 변화와 실제 악화 방향성 일치 검증
+              </p>
+            </div>
+            <div class="pipe-flow-arrow final">&rarr;</div>
+
+            <!-- Step 4 (Human in the loop) -->
+            <div class="pipe-card highlight-final">
+              <div class="pipe-node-title">의료진 재평가</div>
+              <div class="pipe-badge highlight">Final Clinician Decision</div>
+              <p class="pipe-node-desc">
+                &bull; AI 위험 신호와 원천 데이터 즉시 확인<br>
+                &bull; 침상 직접 방문 진찰(Bedside Exam)<br>
+                &bull; 중재적 처치(치료/승압제/기도삽관) 최종 결정
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pipeline 02: 진료기록 파이프라인 -->
+        <div class="pipeline-block" style="margin-top: 36px;">
+          <div class="pipeline-title-bar cyan">
+            <span class="pipeline-num cyan">02</span>
+            <h3 class="pipeline-title">진료기록 자동화 파이프라인</h3>
+            <span class="pipeline-target">Whisper STT &middot; Gemma LLM &middot; Backend Guardrail</span>
+          </div>
+
+          <div class="pipeline-steps-grid">
+            <!-- Step 1 -->
+            <div class="pipe-card">
+              <div class="pipe-node-title">진료 음성 분석</div>
+              <div class="pipe-badge">Speech-to-Text</div>
+              <p class="pipe-node-desc">
+                &bull; <strong>Whisper STT</strong> 엔진 적용<br>
+                &bull; 응급실 소음 환경 필터링<br>
+                &bull; 시간 구간별 화자 발화 원문 생성
+              </p>
+            </div>
+            <div class="pipe-flow-arrow">&rarr;</div>
+
+            <!-- Step 2 -->
+            <div class="pipe-card">
+              <div class="pipe-node-title">기록 초안 구조화</div>
+              <div class="pipe-badge">Medical LLM</div>
+              <p class="pipe-node-desc">
+                &bull; <strong>Gemma + 의학 용어 검색</strong><br>
+                &bull; 표준 온톨로지(SNOMED-CT 등) 매핑<br>
+                &bull; 응급진료기록 12개 항목 초안 구조화
+              </p>
+            </div>
+            <div class="pipe-flow-arrow">&rarr;</div>
+
+            <!-- Step 3 -->
+            <div class="pipe-card">
+              <div class="pipe-node-title">구조 &middot; 참조 검증</div>
+              <div class="pipe-badge">Safety Guardrail</div>
+              <p class="pipe-node-desc">
+                &bull; <strong>Backend Guardrail</strong> 엔진<br>
+                &bull; Fact 일치성, 수치 왜곡 여부 체크<br>
+                &bull; 환자 ID &middot; 상태 플래그 유효성 검증
+              </p>
+            </div>
+            <div class="pipe-flow-arrow final">&rarr;</div>
+
+            <!-- Step 4 (Human in the loop) -->
+            <div class="pipe-card highlight-final">
+              <div class="pipe-node-title">의료진 검토 &middot; 확정</div>
+              <div class="pipe-badge highlight">EMR Sign & Save</div>
+              <p class="pipe-node-desc">
+                &bull; 음성 원문과 대조하여 즉시 수정/보완<br>
+                &bull; 책임 진료의사 최종 승인 확인<br>
+                &bull; 인증 저장: <strong>DRAFT &rarr; SIGNED</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Live Demo Showcase Section -->
+    <section id="demo" class="section demo-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-tag demo-tag">INTERACTIVE SIMULATION</span>
+          <h2 class="section-title">ER:ON 솔루션 실시간 데모 체험</h2>
+          <p class="section-desc">
+            실제 환자 시나리오를 선택하여 악화 예측 AI와 음성 진료기록 생성 AI의 작동 과정을 직접 확인해보세요.
+          </p>
+        </div>
+
+        <!-- Demo Tabs -->
+        <div class="demo-tabs-container">
+          <div class="demo-tab-buttons" role="tablist">
+            <button class="demo-tab-btn active" id="tab-btn-predict" role="tab" aria-selected="true" data-tab="tab-predict">
+              01 환자 악화 예측 시뮬레이터 (Predict)
+            </button>
+            <button class="demo-tab-btn" id="tab-btn-record" role="tab" aria-selected="false" data-tab="tab-record">
+              02 음성 진료기록 초안 생성기 (Record)
+            </button>
+          </div>
+
+          <!-- Tab Content 1: Predict -->
+          <div class="demo-tab-panel active" id="tab-predict" role="tabpanel">
+            <div class="simulator-layout">
+              <!-- Controls Sidebar -->
+              <div class="sim-controls">
+                <h4 class="sim-sidebar-title">환자 시나리오 선택</h4>
+                
+                <div class="scenario-buttons">
+                  <button class="scenario-card active" data-scenario="patient-a">
+                    <div class="sc-header">
+                      <span class="sc-badge danger">고위험 시나리오</span>
+                      <span class="sc-id">#ER-104</span>
+                    </div>
+                    <div class="sc-name">급성 호흡곤란 및 저산소혈증</div>
+                    <div class="sc-meta">남 / 67세 &middot; KTAS 3 &rarr; 악화 감지</div>
+                  </button>
+
+                  <button class="scenario-card" data-scenario="patient-b">
+                    <div class="sc-header">
+                      <span class="sc-badge warning">중등도 시나리오</span>
+                      <span class="sc-id">#ER-209</span>
+                    </div>
+                    <div class="sc-name">패혈증 의증 및 혈압 저하</div>
+                    <div class="sc-meta">여 / 72세 &middot; 발열 & 수축기혈압 강하</div>
+                  </button>
+
+                  <button class="scenario-card" data-scenario="patient-c">
+                    <div class="sc-header">
+                      <span class="sc-badge stable">안정 시나리오</span>
+                      <span class="sc-id">#ER-341</span>
+                    </div>
+                    <div class="sc-name">단순 복통 및 경과 관찰</div>
+                    <div class="sc-meta">남 / 34세 &middot; 활력징후 안정 추세</div>
+                  </button>
+                </div>
+
+                <div class="time-slider-box">
+                  <label for="time-slider" class="time-label">
+                    <span>체류 시간 경과</span>
+                    <span id="time-display" class="time-val">+2시간 (3차 재예측)</span>
+                  </label>
+                  <input type="range" id="time-slider" min="1" max="5" value="2" class="time-range-input">
+                  <div class="time-ticks">
+                    <span>1h (첫 예측)</span>
+                    <span>2h</span>
+                    <span>3h</span>
+                    <span>4h</span>
+                    <span>5h+</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Main Simulation Output -->
+              <div class="sim-display">
+                <div class="sim-status-bar">
+                  <div class="sim-patient-info">
+                    <span class="info-label">환자 정보:</span>
+                    <strong id="sim-patient-title">김OO (67세/남) | 내원사유: 호흡곤란</strong>
+                  </div>
+                  <div class="sim-alert-pill" id="sim-alert-badge">
+                    <span class="blink-dot"></span>
+                    <span id="sim-alert-text">재평가 권고 (URGENT REASSESSMENT)</span>
+                  </div>
+                </div>
+
+                <div class="sim-metrics-grid">
+                  <!-- Gauge -->
+                  <div class="sim-card sim-gauge-card">
+                    <span class="card-caption">향후 3시간 내 악화 위험도</span>
+                    <div class="circle-gauge">
+                      <svg viewBox="0 0 120 120" class="gauge-svg">
+                        <circle cx="60" cy="60" r="50" class="gauge-track"/>
+                        <circle cx="60" cy="60" r="50" class="gauge-fill" id="sim-gauge-circle" style="stroke-dashoffset: 65;"/>
+                      </svg>
+                      <div class="gauge-center-content">
+                        <span class="gauge-percent" id="sim-gauge-value">84%</span>
+                        <span class="gauge-desc" id="sim-gauge-level">위험도 HIGH</span>
+                      </div>
+                    </div>
+                    <div class="sim-event-target" id="sim-target-event">
+                      예측 이벤트: <strong>호흡부전 처치 및 승압제 사용</strong>
+                    </div>
+                  </div>
+
+                  <!-- Explainability SHAP -->
+                  <div class="sim-card sim-shap-card">
+                    <span class="card-caption">TreeSHAP 주요 기여 요인 (상위 신호)</span>
+                    <div class="shap-live-list" id="sim-shap-list">
+                      <!-- Rendered by JavaScript -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Vital Sign Trend Mini Table -->
+                <div class="sim-vitals-box">
+                  <span class="card-caption">시점별 활력징후 추이 (최근 3시간)</span>
+                  <div class="vitals-table-wrapper">
+                    <table class="vitals-table">
+                      <thead>
+                        <tr>
+                          <th>측정 시점</th>
+                          <th>혈압 (BP)</th>
+                          <th>맥박 (HR)</th>
+                          <th>호흡수 (RR)</th>
+                          <th>산소포화도 (SpO2)</th>
+                          <th>체온 (BT)</th>
+                          <th>판정</th>
+                        </tr>
+                      </thead>
+                      <tbody id="sim-vitals-body">
+                        <!-- Populated by JS -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Content 2: Record -->
+          <div class="demo-tab-panel" id="tab-record" role="tabpanel">
+            <div class="record-demo-layout">
+              <!-- Left: Audio Simulation Input -->
+              <div class="record-input-card">
+                <div class="record-card-head">
+                  <span class="head-badge">Whisper STT 입력 시뮬레이션</span>
+                  <button class="btn btn-outline btn-sm" id="btn-replay-audio">대화 다시 변환 &orarr;</button>
+                </div>
+                <div class="audio-transcript-box">
+                  <div class="dialogue-line doctor">
+                    <span class="speaker">의사:</span>
+                    <span class="speech">환자분, 숨이 차신 증상은 정확히 언제부터 심해지셨나요? 가슴 통증이나 기침도 있으신가요?</span>
+                  </div>
+                  <div class="dialogue-line patient">
+                    <span class="speaker">환자:</span>
+                    <span class="speech">한 30분 전부터 숨이 턱턱 막혀요. 가슴 중앙이 답답하고 누르는 것 같고요, 기침할 때 가래는 별로 안 나옵니다.</span>
+                  </div>
+                  <div class="dialogue-line doctor">
+                    <span class="speaker">의사:</span>
+                    <span class="speech">혈압이 88에 55로 많이 떨어져 있고, 산소포화도가 89%입니다. 호흡음 청진해보니 양측 하부에 수포음이 들리네요. 과거 고혈압이나 심장질환 약 드시는 것 있습니까?</span>
+                  </div>
+                  <div class="dialogue-line guardian">
+                    <span class="speaker">보호자:</span>
+                    <span class="speech">5년 전에 협심증 스텐트 시술받으셨고 아스피린이랑 혈압약 복용 중이세요.</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Structured Draft Output (Gemma + 12 Categories) -->
+              <div class="record-output-card">
+                <div class="record-card-head">
+                  <span class="head-badge cyan">Gemma 모델 구조화 진료기록 초안 (12개 항목)</span>
+                  <span class="record-status-tag" id="draft-status-pill">STATUS: DRAFT</span>
+                </div>
+
+                <div class="structured-record-form" id="record-structured-container">
+                  <div class="form-row">
+                    <label class="form-item-label">1. 주소증 (Chief Complaint)</label>
+                    <div class="form-item-val highlight-box">급성 호흡곤란 (Dyspnea, 30분 전 시작), 흉부 압박감</div>
+                  </div>
+                  <div class="form-row">
+                    <label class="form-item-label">2. 현병력 (Present Illness)</label>
+                    <div class="form-item-val">내원 30분 전부터 안정 시 호흡곤란 및 흉부 압박감 급격히 악화. 객담 동반 미미함.</div>
+                  </div>
+                  <div class="form-row">
+                    <label class="form-item-label">3. 과거력 (Past Medical History)</label>
+                    <div class="form-item-val">협심증 (5년 전 스텐트 삽입술), 고혈압 (복약 중)</div>
+                  </div>
+                  <div class="form-row-grid">
+                    <div class="form-row">
+                      <label class="form-item-label">4. 활력징후 (V/S)</label>
+                      <div class="form-item-val warn-box">BP 88/55 mmHg &middot; SpO2 89% &middot; RR 28회/분</div>
+                    </div>
+                    <div class="form-row">
+                      <label class="form-item-label">5. 신체진찰 (Exam)</label>
+                      <div class="form-item-val">양측 폐 하부 수포음 (Crackles) 청취</div>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <label class="form-item-label">6. 추정 진단 및 처치 계획 (Impression & Plan)</label>
+                    <div class="form-item-val action-plan-box">
+                      <strong>[Impression]</strong> 심인성 폐부종 의증 (R/O Cardiogenic Pulmonary Edema, Shock)<br>
+                      <strong>[Plan]</strong> 산소 흡입(High Flow O2), 승압제 라인 확보, 심전도(ECG) 및 흉부 X-ray 즉시 시행
+                    </div>
+                  </div>
+                </div>
+
+                <div class="record-sign-footer">
+                  <div class="guardrail-proof">
+                    <span class="icon-check">&check;</span> Backend Guardrail Fact & 후보 ID 일치 검증 통과
+                  </div>
+                  <button class="btn btn-primary btn-sm" id="btn-sign-draft">
+                    의료진 검토 & 전자서명 확정 (SIGNED)
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Business Model Section (첨부파일 6페이지 완벽 반영) -->
+    <section id="business" class="section business-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-tag biz-tag">BUSINESS MODEL</span>
+          <h2 class="section-title">누가 비용을 지불하고, 무엇을 얻는가</h2>
+          <p class="section-desc">
+            1차 고객은 <strong>병원</strong>입니다. 의료진의 시간과 환자 안전을 지키는 대가로 연간 구독료를 지불합니다.
+          </p>
+        </div>
+
+        <!-- 3-Way Value Exchange Matrix -->
+        <div class="value-matrix-grid">
+          <!-- Hospital -->
+          <div class="value-card hospital">
+            <div class="value-card-header">
+              <div class="value-entity">병원 (HOSPITAL)</div>
+              <span class="payer-badge">1차 지불 고객</span>
+            </div>
+            <div class="value-row">
+              <span class="label">지불:</span>
+              <span class="content highlight-pay">&rarr; 연간 라이선스 구독료</span>
+            </div>
+            <div class="value-row benefits">
+              <span class="label">얻는 가치:</span>
+              <ul class="benefit-list">
+                <li><strong>의료사고 &middot; 소송 리스크 대폭 감소</strong></li>
+                <li><strong>전공의 공백 완충 및 업무 연속성 확보</strong></li>
+                <li><strong>응급의료기관 평가 지표 및 인증 대응</strong></li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Clinician -->
+          <div class="value-card clinician">
+            <div class="value-card-header">
+              <div class="value-entity">의료진 (CLINICIAN)</div>
+              <span class="free-badge">비용 부담 없음</span>
+            </div>
+            <div class="value-row">
+              <span class="label">지불:</span>
+              <span class="content">&rarr; 없음 (병원이 전액 부담)</span>
+            </div>
+            <div class="value-row benefits">
+              <span class="label">얻는 가치:</span>
+              <ul class="benefit-list">
+                <li><strong>반복 재평가 우선순위 알림으로 시간 절감</strong></li>
+                <li><strong>음성 기반 기록 초안으로 문서화 부담 완화</strong></li>
+                <li><strong>설명 가능한 AI로 임상적 의사결정 확신 제고</strong></li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Patient -->
+          <div class="value-card patient">
+            <div class="value-card-header">
+              <div class="value-entity">환자 (PATIENT)</div>
+              <span class="free-badge">비용 부담 없음</span>
+            </div>
+            <div class="value-row">
+              <span class="label">지불:</span>
+              <span class="content">&rarr; 없음</span>
+            </div>
+            <div class="value-row benefits">
+              <span class="label">얻는 가치:</span>
+              <ul class="benefit-list">
+                <li><strong>급성 악화 증상 조기 발견 및 처치</strong></li>
+                <li><strong>응급실 체류 중 지속적인 안전 감시</strong></li>
+                <li><strong>더욱 안전하고 질 높은 응급진료 환경</strong></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 Monetization Channels -->
+        <div class="monetization-channels">
+          <h3 class="channels-title">수익 창출 모델 (3 Core Revenue Streams)</h3>
+          <div class="channels-grid">
+            <div class="channel-card">
+              <div class="channel-number">①</div>
+              <h4 class="channel-name">SaaS 구독 라이선스</h4>
+              <p class="channel-desc">
+                병상 수 및 연간 응급실 이용량 기반의 연간 라이선스 모델 (초기 병원 연동 구축비 + 연간 유지보수 &middot; 업데이트비)
+              </p>
+            </div>
+
+            <div class="channel-card">
+              <div class="channel-number">②</div>
+              <h4 class="channel-name">EMR &middot; HIS 파트너십</h4>
+              <p class="channel-desc">
+                주요 전자의무기록(EMR) 및 병원정보시스템 연동형 패키지 공급을 통한 안정적 영업 채널 확보 및 벤더 수수료 쉐어
+              </p>
+            </div>
+
+            <div class="channel-card">
+              <div class="channel-number">③</div>
+              <h4 class="channel-name">R&amp;D &middot; 실증 연계</h4>
+              <p class="channel-desc">
+                정부(보건복지부&middot;과기정통부) 및 지자체 디지털 헬스케어 지원 실증 사업과 연계한 초기 파일럿 비용 충당
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Business Notice -->
+        <div class="business-disclaimer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p>
+            본 수익모델은 병원 대상 B2B SaaS를 가정한 사업화 방향이며, 실제 가격&middot;계약 조건은 임상 검증 및 병원 파일럿 결과에 따라 확정될 예정입니다. ER:ON은 현재 PoC(개념검증) 단계로, 체결된 상용 계약이나 확정된 가격 정책은 없습니다.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Market & Roadmap Section (첨부파일 7페이지 완벽 반영) -->
+    <section id="roadmap" class="section roadmap-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-tag market-tag">MARKET & ROADMAP</span>
+          <h2 class="section-title">좁게 시작해 표준으로 확장한다</h2>
+          <p class="section-desc">
+            가장 급한 병원부터 — 중증응급환자 최종치료 거점인 <strong>권역응급의료센터</strong>를 시작점으로 삼습니다.
+          </p>
+        </div>
+
+        <!-- Target Market Stats -->
+        <div class="market-targets-grid">
+          <div class="market-card primary-target">
+            <div class="target-flag">1차 목표</div>
+            <h3 class="target-title">권역응급의료센터</h3>
+            <div class="target-count">
+              <span class="num counter" data-target="53">0</span><span class="unit">개 병원</span>
+            </div>
+            <p class="target-meta">2026년 11월부터 운영 확대 (기존 44개소 &rarr; 9곳 추가 확대)</p>
+            <p class="target-desc">
+              중증응급환자 최종치료 기능을 전담 수행하는 핵심 거점병원으로 솔루션 도입 필요성이 가장 시급한 영역입니다.
+            </p>
+          </div>
+
+          <div class="market-card secondary-target">
+            <div class="target-flag">장기 확장</div>
+            <h3 class="target-title">전국 응급의료기관</h3>
+            <div class="target-count">
+              <span class="num">약 </span><span class="num counter" data-target="400">0</span><span class="unit">개 병원</span>
+            </div>
+            <p class="target-meta">전국 권역 &middot; 지역응급의료센터 및 지역응급의료기관</p>
+            <p class="target-desc">
+              국내 표준 응급의료 CDSS 솔루션으로 자리매김하여 전국 거점 및 지역 응급의료기관 전체로 SaaS 공급을 확산합니다.
+            </p>
+          </div>
+        </div>
+
+        <!-- 5-Step Commercialization Roadmap -->
+        <div class="roadmap-timeline">
+          <h3 class="roadmap-heading">상용화 전 반드시 거쳐야 할 검증 단계</h3>
+          
+          <div class="timeline-items">
+            <!-- Step 0 (Done) -->
+            <div class="timeline-step completed">
+              <div class="step-status-chip">완료</div>
+              <div class="step-circle">✓</div>
+              <div class="step-content">
+                <span class="step-phase">CURRENT STATUS</span>
+                <h4 class="step-name">PoC 구현</h4>
+                <p class="step-detail">
+                  MIMIC-IV-ED 대규모 응급 데이터셋 기반 예측 모델 및 진료기록 워크플로우 알고리즘 구현 완료
+                </p>
+              </div>
+            </div>
+
+            <!-- Step 1 -->
+            <div class="timeline-step current">
+              <div class="step-status-chip active">Step 1</div>
+              <div class="step-circle">1</div>
+              <div class="step-content">
+                <span class="step-phase">VALIDATION</span>
+                <h4 class="step-name">국내 검증</h4>
+                <p class="step-detail">
+                  다기관 외부검증(External Validation) 진행 + 한국 응급실 임상 환경에 맞춘 재보정 & 임계값(Threshold) 재설정
+                </p>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="timeline-step">
+              <div class="step-status-chip">Step 2</div>
+              <div class="step-circle">2</div>
+              <div class="step-content">
+                <span class="step-phase">CLINICAL TRIAL</span>
+                <h4 class="step-name">Silent Trial</h4>
+                <p class="step-detail">
+                  의료진 비노출 후향적/전향적 무간섭 운영을 통해 실제 경보 정확도(PPV) 및 알람 피로도 실측
+                </p>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="timeline-step">
+              <div class="step-status-chip">Step 3</div>
+              <div class="step-circle">3</div>
+              <div class="step-content">
+                <span class="step-phase">APPROVAL</span>
+                <h4 class="step-name">인허가 &middot; 파일럿</h4>
+                <p class="step-detail">
+                  식약처(MFDS) AI 의료기기 인허가 획득 및 1차 타깃 권역응급의료센터 중심 시범 도입
+                </p>
+              </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="timeline-step">
+              <div class="step-status-chip">Step 4</div>
+              <div class="step-circle">4</div>
+              <div class="step-content">
+                <span class="step-phase">EXPANSION</span>
+                <h4 class="step-name">전국 확산</h4>
+                <p class="step-detail">
+                  주요 EMR &middot; HIS 연동 표준 프로토콜 확립 및 전국 400여 응급의료기관 SaaS 구독 확대
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Honest Next Step Banner -->
+        <div class="honest-step-banner">
+          <div class="honest-badge">정직한 약속</div>
+          <h3 class="honest-title">지금은 PoC입니다. 임상 검증과 인허가 전에는 상용화하지 않습니다.</h3>
+          <p class="honest-text">
+            환자의 생명과 직결되는 응급의료 환경이기에, ER:ON은 다기관 외부검증 &rarr; 재보정 &rarr; Silent Trial &rarr; 하위그룹 검증 &rarr; 식약처 규제 절차를 철저하고 엄격하게 완수한 후 상용 의료 현장에 배치됩니다.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="section faq-section">
+      <div class="container faq-container">
+        <div class="section-header text-center">
+          <span class="section-tag">FAQ</span>
+          <h2 class="section-title">자주 묻는 질문</h2>
+          <p class="section-desc">ER:ON의 기술과 도입 과정에 대해 궁금하신 점을 확인하세요.</p>
+        </div>
+
+        <div class="faq-accordion" id="faq-accordion">
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Q. AI 예측 결과가 의료진의 진단을 대신하나요?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>아닙니다. ER:ON은 철저히 <strong>'Human-in-the-Loop'</strong> 원칙에 따라 설계된 의료진 보조 솔루션(CDSS)입니다. 최종 진단 및 처치 결정은 반드시 의료진의 직접 진찰과 판단에 의해서만 확정됩니다.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Q. 3시간 내 악화 위험도 예측의 정확도와 근거는 어떻게 검증하나요?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>ER:ON은 LightGBM 모델과 Platt Scaling 확률 보정 기법을 결합하고, TreeSHAP 알고리즘을 통해 수치 변화의 임상적 악화 방향성을 검증합니다. 블랙박스 모델이 아닌 의료진이 납득할 수 있는 주요 원인 신호를 함께 제공합니다.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Q. 기존 병원 전자의무기록(EMR) 시스템과 연동할 수 있나요?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>네, 표준 HL7 FHIR 규격 및 국내 주요 EMR과의 연동 인터페이스를 지원하도록 설계되었습니다. 병원의 전자의무기록 시스템과 원활히 데이터를 교환하며, 기록 초안은 의사의 확인 후 서명(SIGNED)되어 안전하게 전송됩니다.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Q. 병원 내 환자 개인정보 및 의료 데이터 보안은 어떻게 보장되나요?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>모든 데이터는 병원 내부 온프레미스 망 또는 안전한 의료 클라우드 환경에서 암호화되어 처리됩니다. 비식별화 처리 및 백엔드 가드레일을 통해 환자 개인정보 유출을 엄격히 차단합니다.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact & Collaboration Inquiry Section -->
+    <section id="contact" class="section contact-section">
+      <div class="container">
+        <div class="contact-wrapper">
+          <div class="contact-info-col">
+            <span class="section-tag contact-tag">PARTNERSHIP & POC</span>
+            <h2 class="contact-title">의료진의 골든타임을 지키는 혁신에 함께하세요</h2>
+            <p class="contact-desc">
+              권역응급의료센터 임상 실증 파트너십, EMR 연동 기술 협력, 연구 협업에 관심 있는 병원 관계자 및 연구자분의 문의를 환영합니다.
+            </p>
+
+            <div class="contact-notice-box">
+              <div class="c-notice-icon">📋</div>
+              <p class="c-notice-desc">
+                우측의 상담 신청 폼을 작성해 주시면, 접수 확인 후 담당 연구진이 기재해주신 이메일 또는 연락처로 신속히 안내 자료를 전달해 드립니다.
+              </p>
+            </div>
+          </div>
+
+          <!-- Contact Form -->
+          <div class="contact-form-col">
+            <form class="contact-form" id="contact-form" novalidate>
+              <h3 class="form-title">PoC &middot; 실증 참여 상담 신청</h3>
+              <p class="form-sub">정보를 남겨주시면 연구진이 24시간 내에 상세 자료와 함께 회신드립니다.</p>
+
+              <div class="form-group">
+                <label for="institution">소속 기관 / 병원명 *</label>
+                <input type="text" id="institution" name="institution" class="form-input" placeholder="예: OO대학교병원 권역응급의료센터" required>
+                <span class="form-error" id="error-institution">소속 기관명을 입력해주세요.</span>
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="name">담당자 성함 & 직함 *</label>
+                  <input type="text" id="name" name="name" class="form-input" placeholder="예: 홍길동 교수/팀장" required>
+                  <span class="form-error" id="error-name">담당자명을 입력해주세요.</span>
+                </div>
+                <div class="form-group">
+                  <label for="phone">연락처 *</label>
+                  <input type="tel" id="phone" name="phone" class="form-input" placeholder="예: 010-1234-5678" required>
+                  <span class="form-error" id="error-phone">올바른 연락처를 입력해주세요.</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="email">업무용 이메일 *</label>
+                <input type="email" id="email" name="email" class="form-input" placeholder="name@hospital.ac.kr" required>
+                <span class="form-error" id="error-email">올바른 이메일 형식을 입력해주세요.</span>
+              </div>
+
+              <div class="form-group">
+                <label for="inquiry-type">관심 분야 *</label>
+                <select id="inquiry-type" name="inquiryType" class="form-input">
+                  <option value="poc">권역응급센터 다기관 외부검증 & PoC 참여</option>
+                  <option value="emr">EMR / HIS 연동 파트너십</option>
+                  <option value="research">공동 임상 연구 협력</option>
+                  <option value="other">기타 사업 제휴</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="message">문의 상세 내용</label>
+                <textarea id="message" name="message" class="form-textarea" rows="4" placeholder="응급실 병상 규모, 현재 EMR 시스템, 관심 기능 등을 자유롭게 남겨주세요."></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-inquiry-btn">
+                상담 신청 및 소개서 요청하기
+              </button>
+              <div class="form-success-msg" id="form-success-msg">
+                ✓ 문의가 성공적으로 접수되었습니다! 담당 연구진이 빠르게 연락드리겠습니다.
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <span class="logo-er">ER</span><span class="logo-colon">:</span><span class="logo-on">ON</span>
+          </div>
+          <p class="footer-tagline">
+            악화는 미리, 기록은 자동으로.<br>
+            AI 기반 응급실 환자 악화 예측 및 진료기록 자동화 시스템
+          </p>
+        </div>
+
+        <div class="footer-links-grid">
+          <div class="footer-col">
+            <h4 class="footer-col-title">솔루션</h4>
+            <ul>
+              <li><a href="#solutions">환자 악화 예측 AI</a></li>
+              <li><a href="#solutions">음성 진료기록 초안 AI</a></li>
+              <li><a href="#workflow">Human-in-the-Loop 워크플로우</a></li>
+              <li><a href="#demo">인터랙티브 데모</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4 class="footer-col-title">사업 &amp; 로드맵</h4>
+            <ul>
+              <li><a href="#business">비즈니스 모델</a></li>
+              <li><a href="#roadmap">권역응급센터 실증 계획</a></li>
+              <li><a href="#roadmap">식약처 인허가 로드맵</a></li>
+              <li><a href="#faq">FAQ</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4 class="footer-col-title">고객 지원</h4>
+            <ul>
+              <li><a href="#contact">PoC &middot; 시범사업 문의</a></li>
+              <li><a href="#">개인정보처리방침</a></li>
+              <li><a href="#">이용약관</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="footer-disclaimer-box">
+          <strong>[법적 및 임상적 고지]</strong> 본 웹사이트에 소개된 ER:ON 시스템은 의료진의 임상적 판단을 보조하는 모델로 확정 진단 및 최종 기록이 아니며, 식약처 의료기기 인허가 절차 완료 전까지 상용 진료에 단독으로 사용되지 않습니다.
+        </div>
+        <p class="copyright">
+          &copy; 2026 ER:ON Project. All rights reserved. Powered by Clinical AI Research Lab.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Back to Top Floating Button -->
+  <button id="back-to-top" class="back-to-top" aria-label="맨 위로 이동" title="맨 위로 이동">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+  </button>
+
+  <!-- Main JavaScript -->
+  <script src="script.js"></script>
+</body>
+</html>
