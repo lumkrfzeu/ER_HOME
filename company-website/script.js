@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSimulatorPredict();
   initSimulatorRecord();
   initContactForm();
+  initEmailFeatures();
   initBackToTop();
   initRealtimeClock();
 });
@@ -627,11 +628,18 @@ function initSimulatorRecord() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 9. Contact Form Handling                                                   */
+/* 9. Contact Form Handling & eron.support@gmail.com Email Integration         */
 /* -------------------------------------------------------------------------- */
+const OFFICIAL_SUPPORT_EMAIL = 'eron.support@gmail.com';
+
 function initContactForm() {
   const form = document.getElementById('contact-form');
   const successMsg = document.getElementById('form-success-msg');
+  const submitBtn = document.getElementById('submit-inquiry-btn');
+  const resetBtn = document.getElementById('btn-reset-contact-form');
+  const gmailLink = document.getElementById('success-gmail-link');
+  const mailtoLinkEl = document.getElementById('success-mailto-link');
+
   if (!form) return;
 
   form.addEventListener('submit', (e) => {
@@ -656,18 +664,171 @@ function initContactForm() {
       }
     });
 
-    if (isValid) {
-      const submitBtn = document.getElementById('submit-inquiry-btn');
-      submitBtn.textContent = '접수 처리 중...';
-      submitBtn.disabled = true;
-
-      setTimeout(() => {
-        form.reset();
-        submitBtn.style.display = 'none';
-        if (successMsg) successMsg.style.display = 'block';
-      }, 800);
+    if (!isValid) {
+      const firstError = form.querySelector('.form-group.has-error input');
+      if (firstError) firstError.focus();
+      return;
     }
+
+    // Gather form values
+    const institution = document.getElementById('institution').value.trim();
+    const name = document.getElementById('name').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const inquirySelect = document.getElementById('inquiry-type');
+    const inquiryText = inquirySelect.options[inquirySelect.selectedIndex].text;
+    const message = document.getElementById('message').value.trim();
+
+    // Construct Email Subject & Body
+    const subject = `[ER:ON 상담신청] ${institution} - ${name} 담당자님`;
+    const body = 
+`[ER:ON 파트너십 & PoC 실증 참여 상담 신청서]
+────────────────────────────────────────
+■ 소속 기관 / 병원명: ${institution}
+■ 담당자 성함 & 직함: ${name}
+■ 회신 연락처: ${phone}
+■ 업무용 이메일: ${email}
+■ 관심 분야: ${inquiryText}
+
+■ 문의 상세 내용:
+${message ? message : '(상세 내용 미기재)'}
+────────────────────────────────────────
+* 본 메일은 ER:ON 웹사이트 상담 신청 폼에서 eron.support@gmail.com 으로 발송되는 연동 메일입니다.`;
+
+    const encodedSubject = encodeURIComponent(subject);
+    const encodedBody = encodeURIComponent(body);
+
+    const mailtoUrl = `mailto:${OFFICIAL_SUPPORT_EMAIL}?subject=${encodedSubject}&body=${encodedBody}`;
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${OFFICIAL_SUPPORT_EMAIL}&su=${encodedSubject}&body=${encodedBody}`;
+
+    if (submitBtn) {
+      submitBtn.textContent = '이메일 연동 접수 처리 중...';
+      submitBtn.disabled = true;
+    }
+
+    setTimeout(() => {
+      // Set links in success modal
+      if (gmailLink) gmailLink.href = gmailUrl;
+      if (mailtoLinkEl) mailtoLinkEl.href = mailtoUrl;
+
+      // Automatically trigger mailto link to open user's default email client
+      try {
+        const mailtoFrame = document.createElement('iframe');
+        mailtoFrame.style.display = 'none';
+        mailtoFrame.src = mailtoUrl;
+        document.body.appendChild(mailtoFrame);
+        setTimeout(() => mailtoFrame.remove(), 2000);
+      } catch (err) {
+        window.location.href = mailtoUrl;
+      }
+
+      submitBtn.style.display = 'none';
+      if (successMsg) {
+        successMsg.style.display = 'block';
+        successMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      showToast('eron.support@gmail.com 연동 메일 창이 호출되었습니다.');
+    }, 600);
   });
+
+  // Reset Button
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      form.reset();
+      if (submitBtn) {
+        submitBtn.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = '상담 신청 및 이메일 연동 접수하기';
+      }
+      if (successMsg) {
+        successMsg.style.display = 'none';
+      }
+    });
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* 9-1. Email Direct Actions & Clipboard Helper                                */
+/* -------------------------------------------------------------------------- */
+function initEmailFeatures() {
+  const copyButtons = document.querySelectorAll('.btn-copy-email');
+
+  copyButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const email = btn.getAttribute('data-email') || OFFICIAL_SUPPORT_EMAIL;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(email).then(() => {
+          handleCopySuccess(btn, email);
+        }).catch(() => {
+          fallbackCopyText(email, btn);
+        });
+      } else {
+        fallbackCopyText(email, btn);
+      }
+    });
+  });
+}
+
+function handleCopySuccess(btn, email) {
+  const textSpan = btn.querySelector('.copy-btn-text');
+  const originalText = textSpan ? textSpan.textContent : btn.textContent;
+
+  if (textSpan) {
+    textSpan.textContent = '복사 완료!';
+  } else {
+    btn.textContent = '✓ 복사 완료!';
+  }
+  btn.classList.add('copied');
+
+  showToast(`이메일 주소(${email})가 클립보드에 복사되었습니다.`);
+
+  setTimeout(() => {
+    if (textSpan) {
+      textSpan.textContent = originalText;
+    } else {
+      btn.textContent = originalText;
+    }
+    btn.classList.remove('copied');
+  }, 2200);
+}
+
+function fallbackCopyText(text, btn) {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.top = '-9999px';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    document.execCommand('copy');
+    handleCopySuccess(btn, text);
+  } catch (err) {
+    prompt('아래 이메일 주소를 복사하세요 (Ctrl+C):', text);
+  }
+  document.body.removeChild(textArea);
+}
+
+let toastTimer = null;
+function showToast(message) {
+  const toast = document.getElementById('toast-notification');
+  const toastText = document.getElementById('toast-text');
+  if (!toast) return;
+
+  if (toastText && message) {
+    toastText.textContent = message;
+  }
+
+  toast.classList.add('show');
+
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3200);
 }
 
 /* -------------------------------------------------------------------------- */

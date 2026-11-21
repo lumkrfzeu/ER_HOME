@@ -28,6 +28,14 @@
         ER:ON은 의료진의 의사결정을 보조하는 모델로 확정 진단 및 기록이 아닙니다. (현재 PoC 단계 / 상용화 전 임상 검증 진행 중)
       </p>
       <a href="#roadmap" class="notice-link">검증 로드맵 보기 &rarr;</a>
+      <span class="notice-separator" aria-hidden="true">&middot;</span>
+      <a href="mailto:eron.support@gmail.com" class="notice-email-link" title="공식 지원 이메일 문의">
+        <svg class="notice-mail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+          <polyline points="22,6 12,13 2,6"></polyline>
+        </svg>
+        <span>문의: eron.support@gmail.com</span>
+      </a>
     </div>
   </aside>
 
@@ -51,6 +59,7 @@
           <li class="nav-item"><a href="#problem" class="nav-link">도입 배경</a></li>
           <li class="nav-item"><a href="#solutions" class="nav-link">핵심 솔루션</a></li>
           <li class="nav-item"><a href="#workflow" class="nav-link">작동 원리</a></li>
+          <li class="nav-item"><a href="#performance" class="nav-link">예측 성능</a></li>
           <li class="nav-item"><a href="#demo" class="nav-link">인터랙티브 데모</a></li>
           <li class="nav-item"><a href="#business" class="nav-link">비즈니스 모델</a></li>
           <li class="nav-item"><a href="#roadmap" class="nav-link">로드맵</a></li>
@@ -572,6 +581,182 @@
       </div>
     </section>
 
+    <!-- Performance & Evaluation Metrics Section (첨부파일 8페이지 예측 모델 성능 완벽 반영) -->
+    <section id="performance" class="section performance-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-tag perf-tag">PERFORMANCE &middot; 검증 결과</span>
+          <h2 class="section-title">예측 모델 성능</h2>
+          <p class="section-desc">
+            양성률 2.3% 데이터 불균형 &rarr; AUROC 단독이 아닌 <strong>PR-AUC</strong>로 검증. 위험 구간별 실측 악화율로 유효성을 확인
+          </p>
+        </div>
+
+        <div class="perf-main-grid">
+          <!-- Left Column: Core Model Performance Metrics -->
+          <div class="perf-metrics-card">
+            <div class="perf-highlight-box">
+              <div class="perf-badge-wrap">
+                <span class="perf-label">PR-AUC</span>
+                <span class="perf-ci-tag">95% CI &middot; 양성률 2.3% 불균형</span>
+              </div>
+              <div class="perf-hero-value">
+                <span class="perf-hero-num">0.6644</span>
+              </div>
+            </div>
+
+            <div class="perf-sub-metrics-grid">
+              <div class="perf-sub-metric-item">
+                <div class="sub-metric-num">0.9636</div>
+                <div class="sub-metric-label">AUROC</div>
+              </div>
+              <div class="perf-sub-metric-item">
+                <div class="sub-metric-num">0.828</div>
+                <div class="sub-metric-label">Recall</div>
+              </div>
+              <div class="perf-sub-metric-item">
+                <div class="sub-metric-num">0.374</div>
+                <div class="sub-metric-label">Precision</div>
+              </div>
+              <div class="perf-sub-metric-item">
+                <div class="sub-metric-num">0.515</div>
+                <div class="sub-metric-label">F1</div>
+              </div>
+            </div>
+
+            <div class="perf-card-footer">
+              <span class="perf-meta-item">저위험 NPV <strong>99.63%</strong></span>
+              <span class="perf-meta-bullet">&middot;</span>
+              <span class="perf-meta-item">운영값 recall <strong>0.85</strong></span>
+              <span class="perf-meta-bullet">&middot;</span>
+              <span class="perf-meta-item">경보율 <strong>6.35%</strong></span>
+            </div>
+          </div>
+
+          <!-- Right Column: Risk Strata vs Actual Deterioration Rate -->
+          <div class="perf-strata-card">
+            <div class="perf-strata-header">
+              <h3 class="perf-strata-title">위험 구간 &mdash; 실측 악화율</h3>
+              <p class="perf-strata-sub">예측 확률 구간별 실제 악화 발생률</p>
+            </div>
+
+            <div class="perf-strata-list">
+              <!-- Stratum 1: Critical / Very High Risk -->
+              <div class="strata-row critical">
+                <div class="strata-info-col">
+                  <div class="strata-badge-group">
+                    <span class="strata-color-indicator critical"></span>
+                    <span class="strata-name">매우 악화</span>
+                  </div>
+                  <span class="strata-criterion">예측 &ge; 13.34%</span>
+                </div>
+                <div class="strata-target-col">
+                  <span class="strata-target-label">대상</span>
+                  <span class="strata-target-val">3.05%</span>
+                </div>
+                <div class="strata-actual-col">
+                  <span class="strata-actual-label">실측 악화율</span>
+                  <div class="strata-rate-wrap">
+                    <span class="strata-actual-val critical">52.4%</span>
+                    <div class="strata-bar-bg">
+                      <div class="strata-bar-fill critical" style="width: 52.4%;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Stratum 2: Moderate / Deteriorating -->
+              <div class="strata-row warning">
+                <div class="strata-info-col">
+                  <div class="strata-badge-group">
+                    <span class="strata-color-indicator warning"></span>
+                    <span class="strata-name">악화</span>
+                  </div>
+                  <span class="strata-criterion">3.58 &ndash; 13.34%</span>
+                </div>
+                <div class="strata-target-col">
+                  <span class="strata-target-label">대상</span>
+                  <span class="strata-target-val">3.30%</span>
+                </div>
+                <div class="strata-actual-col">
+                  <span class="strata-actual-label">실측 악화율</span>
+                  <div class="strata-rate-wrap">
+                    <span class="strata-actual-val warning">10.4%</span>
+                    <div class="strata-bar-bg">
+                      <div class="strata-bar-fill warning" style="width: 20.8%;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Stratum 3: Low Risk -->
+              <div class="strata-row safe">
+                <div class="strata-info-col">
+                  <div class="strata-badge-group">
+                    <span class="strata-color-indicator safe"></span>
+                    <span class="strata-name">저위험</span>
+                  </div>
+                  <span class="strata-criterion">예측 &lt; 3.58%</span>
+                </div>
+                <div class="strata-target-col">
+                  <span class="strata-target-label">대상</span>
+                  <span class="strata-target-val">93.65%</span>
+                </div>
+                <div class="strata-actual-col">
+                  <span class="strata-actual-label">실측 악화율</span>
+                  <div class="strata-rate-wrap">
+                    <span class="strata-actual-val safe">0.4%</span>
+                    <div class="strata-bar-bg">
+                      <div class="strata-bar-fill safe" style="width: 4%;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Latency / Inference Performance Row -->
+        <div class="perf-latency-card">
+          <div class="latency-label-col">
+            <span class="latency-icon">⚡</span>
+            <span class="latency-heading">추론 성능</span>
+          </div>
+
+          <div class="latency-metrics-group">
+            <div class="latency-item">
+              <span class="latency-num">0.78 <small>ms</small></span>
+              <span class="latency-desc">순수 모델 추론</span>
+            </div>
+            <div class="latency-divider"></div>
+            <div class="latency-item">
+              <span class="latency-num">4.06 <small>ms</small></span>
+              <span class="latency-desc">1명&middot;1시점 전체 경로</span>
+            </div>
+            <div class="latency-divider"></div>
+            <div class="latency-item">
+              <span class="latency-num">4.65 <small>ms</small></span>
+              <span class="latency-desc">환자 1명</span>
+            </div>
+          </div>
+
+          <div class="latency-summary-col">
+            <p class="latency-summary-text">
+              다수 환자&middot;다중 시점에도 응답 지연 최소화<br>
+              <strong>&rarr; 매시간 재예측에 적합한 처리 성능 확보</strong>
+            </p>
+          </div>
+        </div>
+
+        <!-- Footnote / Reference -->
+        <div class="perf-footnote">
+          <p>
+            PR-AUC 기준 = 양성률 2.3% 불균형 대응 &middot; 저위험 구간에 전체 악화의 15.0% 포함(NPV 99.63%) &middot; 운영값 recall 0.85 / 경보율 6.35% &middot; 추론 지연 자체 측정값(운영 사양 따라 상이)
+          </p>
+        </div>
+      </div>
+    </section>
+
     <!-- Interactive Live Demo Showcase Section -->
     <section id="demo" class="section demo-section">
       <div class="container">
@@ -1030,6 +1215,33 @@
             환자의 생명과 직결되는 응급의료 환경이기에, ER:ON은 다기관 외부검증 &rarr; 재보정 &rarr; Silent Trial &rarr; 하위그룹 검증 &rarr; 식약처 규제 절차를 철저하고 엄격하게 완수한 후 상용 의료 현장에 배치됩니다.
           </p>
         </div>
+
+        <!-- R&D & Patent IP Status Card (연구개발현황 & 특허 출원 준비 중) -->
+        <div class="rnd-status-card">
+          <div class="rnd-status-header">
+            <div class="rnd-badge-group">
+              <span class="rnd-tag">연구개발현황</span>
+              <span class="rnd-chip-preparing">
+                <span class="rnd-pulse-dot"></span>
+                특허 출원 준비 중
+              </span>
+            </div>
+          </div>
+          <div class="rnd-card-inner">
+            <div class="rnd-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="rnd-svg-icon">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <path d="m9 12 2 2 4-4"></path>
+              </svg>
+            </div>
+            <div class="rnd-text-content">
+              <h3 class="rnd-title">지식재산권(IP) 보호 &middot; 독창적 의료 AI 기술</h3>
+              <p class="rnd-desc">
+                현재 개발 중인 솔루션과 관련해 특허 출원을 준비하고 있습니다.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1050,6 +1262,16 @@
             </button>
             <div class="faq-answer">
               <p>아닙니다. ER:ON은 철저히 <strong>'Human-in-the-Loop'</strong> 원칙에 따라 설계된 의료진 보조 솔루션(CDSS)입니다. 최종 진단 및 처치 결정은 반드시 의료진의 직접 진찰과 판단에 의해서만 확정됩니다.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Q. 연구개발 현황 및 관련 기술의 특허 출원 계획이 어떻게 되나요?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>현재 개발 중인 솔루션과 관련해 <strong>특허 출원을 준비하고 있습니다.</strong> 응급실 체류 환자 데이터 기반 악화 예측 알고리즘 및 진료 음성 구조화 파이프라인의 고유 기술을 보호하고 신뢰성 높은 임상 솔루션으로 발전시키기 위해 지식재산권(IP) 확보를 체계적으로 진행 중입니다.</p>
             </div>
           </div>
 
@@ -1103,13 +1325,58 @@
                 우측의 상담 신청 폼을 작성해 주시면, 접수 확인 후 담당 연구진이 기재해주신 이메일 또는 연락처로 신속히 안내 자료를 전달해 드립니다.
               </p>
             </div>
+
+            <!-- 공식 이메일 연동 카드 -->
+            <div class="contact-email-card" id="contact-email-card">
+              <div class="email-card-header">
+                <div class="email-badge">
+                  <svg class="mail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                  </svg>
+                  <span>OFFICIAL EMAIL INQUIRY</span>
+                </div>
+                <span class="email-status-chip">상시 접수 &middot; 빠른 회신</span>
+              </div>
+              <h3 class="email-card-title">이메일 직접 연동 및 공식 창구</h3>
+              <p class="email-card-desc">
+                신청서 작성 외에도 공식 지원 이메일로 제안서, 연구자료, 도입 문의를 직접 전달하실 수 있습니다.
+              </p>
+              <div class="email-address-wrapper">
+                <a href="mailto:eron.support@gmail.com" class="email-main-address" title="클릭하여 기본 메일 앱으로 전송">
+                  eron.support@gmail.com
+                </a>
+              </div>
+              <div class="email-action-group">
+                <a href="mailto:eron.support@gmail.com?subject=%5BER%3AON%20%EB%AC%B8%EC%9D%98%5D%20PoC%20%EB%B0%8F%20%ED%8C%8C%ED%8A%B8%EB%84%88%EC%8B%AD%20%EC%83%81%EB%8B%B4%20%EC%8B%A0%EC%B2%AD" class="btn-email-action btn-email-client" title="PC/모바일 기본 메일 앱 열기">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                  </svg>
+                  <span>메일 앱 쓰기</span>
+                </a>
+                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=eron.support@gmail.com&su=%5BER%3AON%20%EB%AC%B8%EC%9D%98%5D%20PoC%20%EB%B0%8F%20%ED%8C%8C%ED%8A%B8%EB%84%88%EC%8B%AD%20%EC%83%81%EB%8B%B4%20%EC%8B%A0%EC%B2%AD" target="_blank" rel="noopener noreferrer" class="btn-email-action btn-email-gmail" title="웹 브라우저 Gmail에서 바로 작성">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.272H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L12 9.545l8.073-6.052C21.69 2.279 24 3.434 24 5.457z"/>
+                  </svg>
+                  <span>Gmail 열기</span>
+                </a>
+                <button type="button" class="btn-email-action btn-copy-email" data-email="eron.support@gmail.com" title="이메일 주소 복사하기">
+                  <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span class="copy-btn-text">주소 복사</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Contact Form -->
           <div class="contact-form-col">
             <form class="contact-form" id="contact-form" novalidate>
               <h3 class="form-title">PoC &middot; 실증 참여 상담 신청</h3>
-              <p class="form-sub">정보를 남겨주시면 연구진이 24시간 내에 상세 자료와 함께 회신드립니다.</p>
+              <p class="form-sub">정보를 남겨주시면 <strong>eron.support@gmail.com</strong> 지원팀으로 자동 연동되어 연구진이 24시간 내에 상세 자료와 함께 회신드립니다.</p>
 
               <div class="form-group">
                 <label for="institution">소속 기관 / 병원명 *</label>
@@ -1152,10 +1419,39 @@
               </div>
 
               <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-inquiry-btn">
-                상담 신청 및 소개서 요청하기
+                상담 신청 및 이메일 연동 접수하기
               </button>
               <div class="form-success-msg" id="form-success-msg">
-                ✓ 문의가 성공적으로 접수되었습니다! 담당 연구진이 빠르게 연락드리겠습니다.
+                <div class="success-icon-badge">✓</div>
+                <h4 class="success-title">문의 신청서 작성이 완료되었습니다!</h4>
+                <p class="success-desc">
+                  공식 접수 이메일(<strong>eron.support@gmail.com</strong>)로 작성하신 상담 신청 내용이 담긴 메일 창이 자동으로 실행됩니다.
+                </p>
+                <div class="success-actions-box">
+                  <a href="#" id="success-gmail-link" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm btn-success-action" title="Gmail 웹에서 전송">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="action-svg">
+                      <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.272H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L12 9.545l8.073-6.052C21.69 2.279 24 3.434 24 5.457z"/>
+                    </svg>
+                    <span>Gmail에서 전송하기</span>
+                  </a>
+                  <a href="#" id="success-mailto-link" class="btn btn-secondary btn-sm btn-success-action" title="기본 메일 앱 다시 열기">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-svg">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                      <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    <span>메일 앱 다시 열기</span>
+                  </a>
+                  <button type="button" class="btn btn-ghost btn-sm btn-success-action btn-copy-email" data-email="eron.support@gmail.com" title="이메일 주소 복사">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-svg">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span class="copy-btn-text">주소 복사</span>
+                  </button>
+                </div>
+                <div class="success-reset-wrap">
+                  <button type="button" class="btn-reset-form" id="btn-reset-contact-form">새 문의 작성하기</button>
+                </div>
               </div>
             </form>
           </div>
@@ -1185,6 +1481,7 @@
               <li><a href="#solutions">환자 악화 예측 AI</a></li>
               <li><a href="#solutions">음성 진료기록 초안 AI</a></li>
               <li><a href="#workflow">Human-in-the-Loop 워크플로우</a></li>
+              <li><a href="#performance">예측 모델 검증 성능</a></li>
               <li><a href="#demo">인터랙티브 데모</a></li>
             </ul>
           </div>
@@ -1201,6 +1498,7 @@
             <h4 class="footer-col-title">고객 지원</h4>
             <ul>
               <li><a href="#contact">PoC &middot; 시범사업 문의</a></li>
+              <li><a href="mailto:eron.support@gmail.com" class="footer-email-link" title="공식 지원팀 이메일"><span class="footer-mail-bullet">✉</span> eron.support@gmail.com</a></li>
               <li><a href="#">개인정보처리방침</a></li>
               <li><a href="#">이용약관</a></li>
             </ul>
@@ -1212,12 +1510,22 @@
         <div class="footer-disclaimer-box">
           <strong>[법적 및 임상적 고지]</strong> 본 웹사이트에 소개된 ER:ON 시스템은 의료진의 임상적 판단을 보조하는 모델로 확정 진단 및 최종 기록이 아니며, 식약처 의료기기 인허가 절차 완료 전까지 상용 진료에 단독으로 사용되지 않습니다.
         </div>
+        <div class="footer-official-email">
+          <span>공식 문의 및 기술 제휴:</span>
+          <a href="mailto:eron.support@gmail.com" class="footer-email-highlight">eron.support@gmail.com</a>
+        </div>
         <p class="copyright">
           &copy; 2026 ER:ON Project. All rights reserved. Powered by Clinical AI Research Lab.
         </p>
       </div>
     </div>
   </footer>
+
+  <!-- Toast Notification for Email Copy & Alerts -->
+  <div id="toast-notification" class="toast-notification" role="status" aria-live="polite">
+    <span class="toast-icon">✓</span>
+    <span class="toast-text" id="toast-text">eron.support@gmail.com 이 클립보드에 복사되었습니다.</span>
+  </div>
 
   <!-- Back to Top Floating Button -->
   <button id="back-to-top" class="back-to-top" aria-label="맨 위로 이동" title="맨 위로 이동">
